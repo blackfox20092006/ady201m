@@ -7,8 +7,8 @@ from selenium.webdriver.common.keys import Keys
 from queue import Queue
 import os
 
-NUM_THREADS = 4
-LINKS_PER_HASHTAG = 100
+NUM_THREADS = 10
+LINKS_PER_HASHTAG = 2000
 HASHTAG_FILE = 'ythashtags.dat'
 
 hashtag_queue = Queue()
