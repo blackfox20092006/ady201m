@@ -39,6 +39,7 @@ def download_videos():
             '--download-archive', ARCHIVE_FILE,
             '--no-overwrites',
             '--ignore-errors',
+            '--match-filter', 'duration <= 100'
         ]
         
         command.append(url)
