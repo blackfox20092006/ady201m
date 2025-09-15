@@ -1,1 +1,2 @@
-classify.main: Dùng pretrained movinet để phân loại video có bạo lực và video không có bạo lực vào 2 thư mục khác nhau của /dataset/.. sau đó lọc tay lại xem có video nào bị False Negative, False Positive, Confusing Label(50% non-violence, 50% violence)
+After crawling videos from youtube, we will label them into non-violence or violence in ./dataset/
+Full dataset are uploaded at 
