@@ -2,17 +2,14 @@ import os
 import subprocess
 import multiprocessing
 import numpy as np
-
 INPUT_FOLDERS = ['non_violence', 'violence']
 OUTPUT_FOLDERS = ['non_violence_output', 'violence_output']
 MIN_DIMENSION = 128
 TARGET_FPS = 12
 TARGET_SIZE = 256
 VIDEO_EXTENSIONS = ('.mp4', '.avi', '.mov', '.mkv', '.flv', '.wmv')
-
 GPU_TYPE = 'NVIDIA' 
 NUM_PROCESSES = multiprocessing.cpu_count() 
-
 def get_video_dimensions(video_path):
     try:
         command = [
@@ -24,7 +21,6 @@ def get_video_dimensions(video_path):
         return width, height
     except Exception:
         return None, None
-
 def build_ffmpeg_command(input_path, gpu_type):
     hwaccel_options = []
     if gpu_type == 'NVIDIA':
@@ -33,9 +29,7 @@ def build_ffmpeg_command(input_path, gpu_type):
         hwaccel_options = ['-hwaccel', 'qsv', '-c:v', 'h264_qsv']
     elif gpu_type == 'AMD':
         hwaccel_options = ['-hwaccel', 'dxva2']
-
     video_filters = f'scale={TARGET_SIZE}:{TARGET_SIZE}:force_original_aspect_ratio=decrease,pad={TARGET_SIZE}:{TARGET_SIZE}:(ow-iw)/2:(oh-ih)/2:color=black,fps={TARGET_FPS}'
-    
     command = ['ffmpeg'] + hwaccel_options + [
         '-i', input_path,
         '-vf', video_filters,
@@ -45,7 +39,6 @@ def build_ffmpeg_command(input_path, gpu_type):
         'pipe:1'
     ]
     return command
-
 def run_conversion(input_path, output_path, gpu_type):
     command = build_ffmpeg_command(input_path, gpu_type)
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
