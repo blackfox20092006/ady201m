@@ -1,15 +1,24 @@
 import sqlite3
 db = sqlite3.connect('data.db')
 cur = db.cursor()
-cur.execute('drop table if exists Videos')
-cur.execute('drop table if exists Metadata')
-cur.execute('drop table if exists Analysis_result')
 #create tables
 queries = [
+    '''PRAGMA foreign_keys = ON;''',
+    '''drop table if exists Videos;''',
+    '''drop table if exists Metadata;''',
+    '''drop table if exists Analysis_result;''',
+    '''
+    create table Labels(
+        label_id int not null primary key,
+        label_name nvarchar(20),
+        description nvarchar
+    );
+    ''',
     '''
     create table Videos(
         video_id int not null primary key,
-        label_id int not null  
+        label_id int not null,
+        foreign key (label_id) references Labels(label_id) on delete cascade
     );
     ''',
     '''
@@ -24,14 +33,17 @@ queries = [
         format nvarchar(6),
         duration int, 
         file_size int,
-        file_path nvarchar(1000) not null
+        file_path nvarchar(1000) not null,
+        foreign key (video_id) references Videos(video_id) on delete cascade
     );
     ''',
     '''
     create table Analysis_result(
         video_id int not null primary key,
         violence_probability float not null,
-        time date
+        time date,
+        foreign key (video_id) references Videos(video_id) on delete cascade,
+        foreign key (video_id) references Metadata(video_id) on delete cascade
     );
     '''
 ] #duration in second / resolution in format: (xxxx,yyyy) / file_size in kB
