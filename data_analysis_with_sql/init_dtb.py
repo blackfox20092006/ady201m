@@ -72,15 +72,6 @@ cur.execute(query.format('Labels', '(label_id, label_name, description)', f"({la
 for i in os.listdir():
     if i.split('.')[-1] not in ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm']:
         continue
-    # file_path = os.path.join(non_dataset_path, i)
-    # bitrate = int(ffmpeg.probe(file_path)['format']['bit_rate']) // 1000
-    # codec = next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['codec_name']
-    # fps = eval(next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['avg_frame_rate'])
-    # resolution = f"{next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['width']}x{next(stream for stream in ffmpeg.probe(i)['streams'] if stream['codec_type'] == 'video')['height']}"
-    # time = os.path.getctime(file_path)
-    # format = i.split('.')[-1]
-    # duration = float(ffmpeg.probe(file_path)['format']['duration'])
-    # file_size = os.path.getsize(file_path) // 1024
     file_path = os.path.join(non_dataset_path, i)
     tmp_probe = ffmpeg.probe(file_path)
     tmp_probe_data = tmp_probe['format']
@@ -107,15 +98,6 @@ cur.execute(query.format('Labels', '(label_id, label_name, description)', f"({la
 for i in os.listdir():
     if i.split('.')[-1] not in ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm']:
         continue
-    # file_path = os.path.join(vio_dataset_path, i)
-    # bitrate = int(ffmpeg.probe(file_path)['format']['bit_rate']) // 1000
-    # codec = next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['codec_name']
-    # fps = eval(next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['avg_frame_rate'])
-    # resolution = f"{next(stream for stream in ffmpeg.probe(file_path)['streams'] if stream['codec_type'] == 'video')['width']}x{next(stream for stream in ffmpeg.probe(i)['streams'] if stream['codec_type'] == 'video')['height']}"
-    # time = os.path.getctime(file_path)
-    # format = i.split('.')[-1]
-    # duration = float(ffmpeg.probe(file_path)['format']['duration'])
-    # file_size = os.path.getsize(file_path) // 1024
     file_path = os.path.join(vio_dataset_path, i)
     tmp_probe = ffmpeg.probe(file_path)
     tmp_probe_data = tmp_probe['format']
