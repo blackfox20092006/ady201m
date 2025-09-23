@@ -51,7 +51,6 @@ queries = [
     create table Analysis_result(
         video_id int not null primary key,
         violence_probability float not null,
-        time date,
         foreign key (video_id) references Videos(video_id) on delete cascade,
         foreign key (video_id) references Metadata(video_id) on delete cascade
     );
