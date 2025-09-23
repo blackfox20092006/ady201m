@@ -1,3 +1,5 @@
 ffmpeg
 selenium
 torch
+numpy
+ffmpeg
