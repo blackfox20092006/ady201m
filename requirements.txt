@@ -2,4 +2,5 @@ ffmpeg
 selenium
 torch
 numpy
-ffmpeg
+ffmpeg-python
+python-dotenv
