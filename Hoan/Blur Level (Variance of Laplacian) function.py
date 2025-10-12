@@ -1,9 +1,8 @@
 import cv2
 import numpy as np
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict
 
 def _to_u8(img: np.ndarray) -> np.ndarray:
-    """Chuẩn hoá về uint8 (0..255) nhưng KHÔNG đổi số kênh."""
     if img.dtype == np.uint8:
         return img
     if np.issubdtype(img.dtype, np.floating):
@@ -20,15 +19,8 @@ def variance_of_laplacian_single(
     frame: np.ndarray,
     ksize: int = 3,
     pre_blur: int = 0,
-    color_mode: str = "y",  # "y" | "gray" | "per_channel_mean" | "per_channel_median"
+    color_mode: str = "y",
 ) -> Tuple[float, Dict[str, float]]:
-    """
-    Tính Blur Level (Variance of Laplacian) cho 1 frame.
-    - color_mode="y": dùng kênh Y (YCrCb) – khuyến nghị cho đo độ nét
-    - "gray": chuyển xám chuẩn
-    - "per_channel_mean"/"per_channel_median": tính Laplacian từng kênh B,G,R rồi gộp
-    Trả về: (float_value, stats_dict)
-    """
     f = _to_u8(frame)
 
     if pre_blur and pre_blur > 0:
@@ -42,12 +34,11 @@ def variance_of_laplacian_single(
         s = float(lap.std())
         return v, m, s
 
-    if f.ndim == 2:  # 1 kênh sẵn
+    if f.ndim == 2:
         v, m, s = lap_var(f)
         return v, {"lap_mean": m, "lap_std": s, "height": int(f.shape[0]), "width": int(f.shape[1]),
                    "ksize": int(ksize), "pre_blur": int(pre_blur), "mode": "single_channel"}
 
-    # 3/4 kênh BGR(A)
     bgr = f[..., :3]
 
     if color_mode == "y":
@@ -64,8 +55,7 @@ def variance_of_laplacian_single(
                  "ksize": int(ksize), "pre_blur": int(pre_blur), "mode": "gray"}
         return v, stats
 
-    # gộp theo từng kênh màu
-    chans = cv2.split(bgr)  # B, G, R
+    chans = cv2.split(bgr)
     vals, means, stds = [], [], []
     for ch in chans:
         v, m, s = lap_var(ch)
@@ -89,17 +79,12 @@ def variance_of_laplacian_single(
         "mode": mode,
     }
     return agg, stats
-
 def variance_of_laplacian_video(
     video: np.ndarray,
     ksize: int = 3,
     pre_blur: int = 0,
     color_mode: str = "y",
 ) -> Tuple[float, Dict[str, float]]:
-    """
-    Tính Blur Level cho cả video (mảng numpy shape (T,H,W[,C])).
-    Trả về mean của các frame + thống kê phân phối.
-    """
     if video.ndim not in (3, 4):
         raise ValueError(f"Unsupported video shape: {video.shape}")
     T = video.shape[0]
