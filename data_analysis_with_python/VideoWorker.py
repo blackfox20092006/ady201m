@@ -103,12 +103,10 @@ def optical_flow_magnitude(video_path):
 def extract(video_path):
     frames = load_video(video_path)
     features = {}
-
     features["frame_diff_mean"] = frame_difference_mean_color(frames)
     features["frame_diff_var"] = frame_difference_variance_color(frames)
     features["brightness"] = brightness_variation_color(frames)
     features["contrast"] = contrast_variation_color(frames)
     features["blur"] = blur_level_variation(frames)
     features["optical_flow"] = optical_flow_magnitude(video_path)
-
     return features
