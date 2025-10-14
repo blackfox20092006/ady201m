@@ -26,14 +26,14 @@ queries = [
     ''',
     '''
     create table Videos(
-        video_id int not null primary key,
+        video_id nvarchar not null primary key,
         label_id int not null,
         foreign key (label_id) references Labels(label_id) on delete cascade
     );
     ''',
     '''
     create table Metadata(
-        video_id int not null primary key,
+        video_id nvarchar not null primary key,
         video_name nvarchar(200) not null,
         bitrate int,
         codec nvarchar(6),
@@ -49,7 +49,7 @@ queries = [
     ''',
     '''
     create table Analysis_result(
-        video_id int not null primary key,
+        video_id nvarchar not null primary key,
         violence_probability float not null,
         foreign key (video_id) references Videos(video_id) on delete cascade,
         foreign key (video_id) references Metadata(video_id) on delete cascade
@@ -60,7 +60,7 @@ for i in queries:
     cur.execute(i)
 #end init
 
-query = 'insert into {} {} values {}' #ex: insert into {Videos} {(video_id, label_id)} values {(6, 100), (7, 200), (8, 300)};
+query = 'insert into {} {} values {}' 
 count_Var = 1
 
 #begin load non
@@ -84,8 +84,8 @@ for i in os.listdir():
     file_format = i.split('.')[-1]
     duration = float(tmp_probe_data['duration'])
     file_size = os.path.getsize(file_path) // 1024
-    cur.execute(query.format('Videos', '(video_id, label_id)', f'({count_Var}, {label_id})'))
-    cur.execute(query.format('Metadata', '(video_id, video_name, bitrate, codec, fps, resolution, time, format, duration, file_size, file_path)', f"({count_Var}, '{i}', {bitrate}, '{codec}', {fps}, '{resolution}', {time}, '{file_format}', {duration}, {file_size}, '{file_path}')"))
+    cur.execute(query.format('Videos', '(video_id, label_id)', f'("n_{count_Var}", {label_id})'))
+    cur.execute(query.format('Metadata', '(video_id, video_name, bitrate, codec, fps, resolution, time, format, duration, file_size, file_path)', f"('n_{count_Var}', '{i}', {bitrate}, '{codec}', {fps}, '{resolution}', {time}, '{file_format}', {duration}, {file_size}, '{file_path}')"))
     count_Var += 1
 #end load non
 db.commit()
@@ -94,6 +94,7 @@ os.chdir(vio_dataset_path)
 label_id = '1'
 label_name = 'vio_violence'
 desc = 'violence video'
+count_Var = 1
 cur.execute(query.format('Labels', '(label_id, label_name, description)', f"({label_id}, '{label_name}', '{desc}')"))
 for i in os.listdir():
     if i.split('.')[-1] not in ['mp4', 'mov', 'avi', 'mkv', 'wmv', 'flv', 'webm']:
@@ -110,8 +111,8 @@ for i in os.listdir():
     file_format = i.split('.')[-1]
     duration = float(tmp_probe_data['duration'])
     file_size = os.path.getsize(file_path) // 1024
-    cur.execute(query.format('Videos', '(video_id, label_id)', f'({count_Var}, {label_id})'))
-    cur.execute(query.format('Metadata', '(video_id, video_name, bitrate, codec, fps, resolution, time, format, duration, file_size, file_path)', f"({count_Var}, '{i}', {bitrate}, '{codec}', {fps}, '{resolution}', {time}, '{file_format}', {duration}, {file_size}, '{file_path}')"))
+    cur.execute(query.format('Videos', '(video_id, label_id)', f'("v_{count_Var}", {label_id})'))
+    cur.execute(query.format('Metadata', '(video_id, video_name, bitrate, codec, fps, resolution, time, format, duration, file_size, file_path)', f"('v_{count_Var}', '{i}', {bitrate}, '{codec}', {fps}, '{resolution}', {time}, '{file_format}', {duration}, {file_size}, '{file_path}')"))
     count_Var += 1
 db.commit()
 #end load vio
