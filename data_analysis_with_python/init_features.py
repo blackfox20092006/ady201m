@@ -1,60 +1,67 @@
 import sqlite3
 import numpy as np
-from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
 import os
 from VideoWorker import extract
 from concurrent.futures import ThreadPoolExecutor
+import cv2
 
 load_dotenv(find_dotenv())
 root = os.getenv('ROOT')
 dtb_path = os.path.join(root, 'data_analysis_with_sql', 'data.db')
-non_dataset_path = os.path.join(root, 'data_understand_and_preprocessing', 'preprocessing', 'dataset', 'non_violence_output')
-vio_dataset_path = os.path.join(root, 'data_understand_and_preprocessing', 'preprocessing', 'dataset', 'violence_output')
 MAX_THREADS = 10
+TARGET_FPS = 12
+TARGET_SIZE = (256, 256)
 
 def get_max_feature(feature_list):
     if feature_list is not None and len(feature_list) > 0:
         return float(np.max(feature_list))
     return None
 
-def get_video_path(video_id):
-    if video_id.startswith('n_'):
-        idx = video_id.split('_')[1]
-        folder = non_dataset_path
-    elif video_id.startswith('v_'):
-        idx = video_id.split('_')[1]
-        folder = vio_dataset_path
-    else:
-        return None
-    for f in os.listdir(folder):
-        if f.split('.')[0] == idx:
-            return os.path.join(folder, f)
-    return None
-
 def process_video(video_data):
-    video_id, _ = video_data
+    video_id, file_path = video_data
     db = None
     try:
-        file_path = get_video_path(video_id)
-        if file_path is None:
-            print(f"File not found for {video_id}")
+        if not os.path.exists(file_path):
+            print(f"File not found at path: {file_path} for video_id: {video_id}")
             return
 
         db = sqlite3.connect(dtb_path, timeout=10)
         cur = db.cursor()
 
-        if str(file_path).endswith(".npy"):
-            frames = np.load(file_path)
-        else:
-            print(f"Skipping non-npy file: {file_path}")
+        frames = []
+        cap = cv2.VideoCapture(file_path)
+        if not cap.isOpened():
+            print(f"Error opening video file: {file_path}")
             return
 
-        if frames.dtype != np.uint8:
-            frames = np.clip(frames, 0, 1)
-            frames = (frames * 255).astype(np.uint8)
+        original_fps = cap.get(cv2.CAP_PROP_FPS)
+        if original_fps == 0:
+            print(f"Warning: Could not get FPS for {video_id}. Assuming 30.")
+            original_fps = 30.0
 
-        features = extract(frames)
+        step = round(original_fps / TARGET_FPS)
+        step = max(1, step)
+
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if frame_count % step == 0:
+                resized_frame = cv2.resize(frame, TARGET_SIZE)
+                frames.append(resized_frame)
+            frame_count += 1
+        
+        cap.release()
+
+        if not frames:
+            print(f"No frames extracted for {video_id}")
+            return
+
+        frames_np = np.array(frames)
+        features = extract(frames_np)
 
         update_data = (
             get_max_feature(features.get("frame_diff_mean")),
@@ -93,19 +100,16 @@ def process_video(video_data):
         if db:
             db.close()
 
-
 def main():
     try:
         with sqlite3.connect(dtb_path) as db:
             cur = db.cursor()
             cur.execute("PRAGMA foreign_keys = ON;")
+            
             columns_to_add = [
-                ("frame_diff_mean", "REAL"),
-                ("frame_diff_var", "REAL"),
-                ("blur", "REAL"),
-                ("brightness", "REAL"),
-                ("contrast", "REAL"),
-                ("optical_flow", "REAL"),
+                ("frame_diff_mean", "REAL"), ("frame_diff_var", "REAL"),
+                ("blur", "REAL"), ("brightness", "REAL"),
+                ("contrast", "REAL"), ("optical_flow", "REAL"),
             ]
             for col, dtype in columns_to_add:
                 try:
@@ -114,15 +118,17 @@ def main():
                     if "duplicate column" not in str(e).lower():
                         raise e
             print("Columns checked/added successfully.")
+            
             cur.execute("SELECT video_id, file_path FROM Metadata;")
-            videos = cur.fetchall()
+            videos_to_process = cur.fetchall()
+
     except sqlite3.Error as e:
         print(f"Initial database error: {e}")
         return
 
-    print(f"Found {len(videos)} videos to process.")
+    print(f"Found {len(videos_to_process)} videos to process.")
     with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-        executor.map(process_video, videos)
+        executor.map(process_video, videos_to_process)
 
 if __name__ == "__main__":
     main()
