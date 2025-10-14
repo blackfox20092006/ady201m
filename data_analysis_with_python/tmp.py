@@ -1,89 +1,152 @@
-import os, sqlite3, numpy as np, tensorflow as tf
-from huggingface_hub import hf_hub_download
+import sqlite3
+import numpy as np
+from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
-from official.projects.movinet.modeling import movinet, movinet_model
+import os
+from VideoWorker import extract
+from concurrent.futures import ThreadPoolExecutor
+import cv2
 
 load_dotenv(find_dotenv())
 root = os.getenv('ROOT')
 dtb_path = os.path.join(root, 'data_analysis_with_sql', 'data.db')
+non_dataset_path = os.path.join(root, 'data_understand_and_preprocessing', 'preprocessing', 'dataset', 'non_violence')
+vio_dataset_path = os.path.join(root, 'data_understand_and_preprocessing', 'preprocessing', 'dataset', 'violence')
+MAX_THREADS = 10
+TARGET_FPS = 12
 
-repo = "engares/MoViNet4Violence-Detection"
-subdir = "trained_models_dropout_autolr_trlayers_NoAug/movinet_a3_12fps_64bs_0.001lr_0.3dr_0tl"
-files = [
-    "movinet_a3_stream_wbm.data-00000-of-00001",
-    "movinet_a3_stream_wbm.index",
-    "checkpoint"
-]
-ckpt_dir = "weights_movinet_a3"
-os.makedirs(ckpt_dir, exist_ok=True)
+def get_max_feature(feature_list):
+    if feature_list is not None and len(feature_list) > 0:
+        return float(np.max(feature_list))
+    return None
 
-for f in files:
-    path = hf_hub_download(repo_id=repo, filename=f"{subdir}/{f}")
-    dst = os.path.join(ckpt_dir, f)
-    if not os.path.exists(dst):
-        tf.io.gfile.copy(path, dst, overwrite=True)
+def get_video_path(video_id):
+    if video_id.startswith('n_'):
+        idx = video_id.split('_')[1]
+        folder = non_dataset_path
+    elif video_id.startswith('v_'):
+        idx = video_id.split('_')[1]
+        folder = vio_dataset_path
+    else:
+        return None
 
-def build_movinet_a3():
-    backbone = movinet.Movinet(
-        model_id='a3',
-        causal=True,
-        conv_type='2plus1d',
-        se_type='2plus3d',
-        activation='hard_swish',
-        gating_activation='hard_sigmoid',
-        use_external_states=True,
-        use_positional_encoding=True
-    )
-    model = movinet_model.MovinetClassifier(backbone=backbone, num_classes=2, output_states=True)
-    inputs = tf.ones([1, 1, 256, 256, 3])
-    model.build(inputs.shape)
-    ckpt = tf.train.Checkpoint(model=model)
-    ckpt.restore(os.path.join(ckpt_dir, "movinet_a3_stream_wbm")).expect_partial()
-    return model
+    for f in os.listdir(folder):
+        if f.split('.')[0] == idx and f.endswith('.mp4'):
+            return os.path.join(folder, f)
+    return None
 
-model = build_movinet_a3()
-
-def streaming_inference(video_arr, model):
-    video = tf.convert_to_tensor(video_arr, dtype=tf.float32)
-    if video.ndim == 4:
-        video = video / 255.0
-    elif video.ndim == 5:
-        video = video[0] / 255.0
-    images = tf.split(video[tf.newaxis], video.shape[0], axis=1)
-    states = model.init_states(tf.shape(tf.ones(shape=[1, 1, 256, 256, 3])))
-    all_logits = []
-    for img in images:
-        logits, states = model({**states, "image": img})
-        all_logits.append(logits)
-    logits = tf.concat(all_logits, 0)
-    probs = tf.nn.softmax(logits, axis=-1)
-    return float(probs[-1][0].numpy())
-
-db = sqlite3.connect(dtb_path)
-cur = db.cursor()
-
-try:
-    cur.execute("ALTER TABLE Analysis_result ADD COLUMN violence_probability REAL;")
-    db.commit()
-except sqlite3.OperationalError:
-    pass
-
-cur.execute("SELECT video_id, file_path FROM Metadata;")
-videos = cur.fetchall()
-
-for video_id, file_path in videos:
+def process_video(video_data):
+    video_id, _ = video_data
+    db = None
     try:
-        arr = np.load(file_path)
-        prob = streaming_inference(arr, model)
-        cur.execute(
-            "UPDATE Analysis_result SET violence_probability = ? WHERE video_id = ?;",
-            (prob, video_id)
-        )
-        db.commit()
-        print(f"[OK] {os.path.basename(file_path)} → {prob*100:.2f}% violent")
-    except Exception as e:
-        print(f"[SKIP] {file_path}: {e}")
-        continue
+        file_path = get_video_path(video_id)
+        if file_path is None:
+            print(f"File not found for {video_id}")
+            return
 
-cur.close()
-db.close()
+        db = sqlite3.connect(dtb_path, timeout=10)
+        cur = db.cursor()
+
+        frames = []
+        cap = cv2.VideoCapture(file_path)
+        if not cap.isOpened():
+            print(f"Error opening video file: {file_path}")
+            return
+
+        original_fps = cap.get(cv2.CAP_PROP_FPS)
+        if original_fps == 0:
+            print(f"Warning: Could not get FPS for {video_id}. Assuming 30.")
+            original_fps = 30.0
+
+        step = round(original_fps / TARGET_FPS)
+        step = max(1, step)
+
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            if frame_count % step == 0:
+                frames.append(frame)
+            frame_count += 1
+        
+        cap.release()
+
+        if not frames:
+            print(f"No frames extracted for {video_id}")
+            return
+
+        frames_np = np.array(frames)
+        features = extract(frames_np)
+
+        update_data = (
+            get_max_feature(features.get("frame_diff_mean")),
+            get_max_feature(features.get("frame_diff_var")),
+            get_max_feature(features.get("blur")),
+            get_max_feature(features.get("brightness")),
+            get_max_feature(features.get("contrast")),
+            get_max_feature(features.get("optical_flow")),
+            video_id
+        )
+
+        cur.execute("SELECT COUNT(*) FROM Analysis_result WHERE video_id = ?", (video_id,))
+        if cur.fetchone()[0] > 0:
+            update_query = """
+                UPDATE Analysis_result
+                SET frame_diff_mean = ?, frame_diff_var = ?, blur = ?, brightness = ?, contrast = ?, optical_flow = ?
+                WHERE video_id = ?;
+            """
+            cur.execute(update_query, update_data)
+            print('[UPDATE]', end='')
+        else:
+            insert_query = """
+                INSERT INTO Analysis_result (
+                    frame_diff_mean, frame_diff_var, blur, brightness, contrast, optical_flow, video_id, violence_probability
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0.0);
+            """
+            cur.execute(insert_query, update_data)
+            print('[INSERT]', end='')
+        db.commit()
+        print(f"Processed video_id: {video_id}")
+
+    except Exception as e:
+        print(f"Error processing {video_id}: {e}")
+
+    finally:
+        if db:
+            db.close()
+
+
+def main():
+    try:
+        with sqlite3.connect(dtb_path) as db:
+            cur = db.cursor()
+            cur.execute("PRAGMA foreign_keys = ON;")
+            columns_to_add = [
+                ("frame_diff_mean", "REAL"),
+                ("frame_diff_var", "REAL"),
+                ("blur", "REAL"),
+                ("brightness", "REAL"),
+                ("contrast", "REAL"),
+                ("optical_flow", "REAL"),
+            ]
+            for col, dtype in columns_to_add:
+                try:
+                    cur.execute(f"ALTER TABLE Analysis_result ADD COLUMN {col} {dtype};")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column" not in str(e).lower():
+                        raise e
+            print("Columns checked/added successfully.")
+            cur.execute("SELECT video_id, file_path FROM Metadata;")
+            videos = cur.fetchall()
+    except sqlite3.Error as e:
+        print(f"Initial database error: {e}")
+        return
+
+    print(f"Found {len(videos)} videos to process.")
+    with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        executor.map(process_video, videos)
+
+if __name__ == "__main__":
+    main()
