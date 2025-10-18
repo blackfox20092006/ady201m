@@ -1,25 +1,18 @@
+#main flow
 ffmpeg-python
 selenium
 torch
 numpy
-ffmpeg-python
 python-dotenv
-opencv-python
-keras==2.15.0
-tensorflow==2.15.0
-tf-models-official==2.15.0
-remotezip
+#train model req
+tflite-runtime
+keras>=2.15.0
+tensorflow>=2.15.0
+tf-models-official>=2.15.0
 tqdm
 opencv-python>=4.5.2.52
-opencv-python-headless>=4.5.2.52
 imageio
-gdown
-tensorflow_hub
-seaborn
-mediapy
+git+https://github.com/tensorflow/docs
 ipympl
 moviepy
-scikit-image
-scikit-learn
-IPython
-numpy
+
