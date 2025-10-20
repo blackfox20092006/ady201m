@@ -2,7 +2,7 @@ import sqlite3
 import numpy as np
 from dotenv import find_dotenv, load_dotenv
 import os
-from VideoWorker import extract
+from VideoWorker import extract, get_vio_prob
 from concurrent.futures import ThreadPoolExecutor
 import cv2
 
@@ -70,7 +70,8 @@ def process_video(video_data):
             get_max_feature(features.get("brightness")),
             get_max_feature(features.get("contrast")),
             get_max_feature(features.get("optical_flow")),
-            video_id
+            video_id,
+            get_vio_prob(file_path)
         )
 
         cur.execute("SELECT COUNT(*) FROM Analysis_result WHERE video_id = ?", (video_id,))
@@ -86,7 +87,7 @@ def process_video(video_data):
             insert_query = """
                 INSERT INTO Analysis_result (
                     frame_diff_mean, frame_diff_var, blur, brightness, contrast, optical_flow, video_id, violence_probability
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 0.0);
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
             """
             cur.execute(insert_query, update_data)
             print('[INSERT]', end='')

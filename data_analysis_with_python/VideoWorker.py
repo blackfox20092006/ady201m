@@ -1,6 +1,11 @@
 import cv2
 import numpy as np
-import os
+import os, sys
+import tensorflow as tf
+from dotenv import find_dotenv, load_dotenv
+load_dotenv(find_dotenv())
+root = os.getenv('ROOT')
+model_path = os.path.join(root, model, "model.tflite")
 
 def load_video(video_input):
     if isinstance(video_input, str):
@@ -113,3 +118,35 @@ def extract(video_input):
     features["blur"] = blur_level_variation(frames)
     features["optical_flow"] = optical_flow_magnitude(video_input)
     return features
+def get_vio_prob(video_path):
+    def load_video_tensor(video_path, size=(224,224), fps=12):
+        cap = cv2.VideoCapture(video_path)
+        frames = []
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame = cv2.cvtColor(cv2.resize(frame, size), cv2.COLOR_BGR2RGB)
+            frames.append(frame)
+        cap.release()
+        video = np.array(frames, dtype=np.float32) / 255.0
+        return tf.convert_to_tensor(video, dtype=tf.float32)
+    interpreter = tf.lite.Interpreter(model_path=model_path)
+    runner = interpreter.get_signature_runner()
+    init_states = {
+        name: tf.zeros(x['shape'], dtype=x['dtype'])
+        for name, x in runner.get_input_details().items()
+    }
+    del init_states['image']
+    video = load_video_tensor(video_path, size=(172,172), fps=12)
+    clips = tf.split(video[tf.newaxis], video.shape[0], axis=1)
+    states = init_states
+    for clip in clips:
+        outputs = runner(**states, image=clip)
+        logits = outputs.pop('logits')[0]
+        states = outputs
+
+    probs = tf.nn.softmax(logits)
+    labels = ["Fight", "No_Fight"]
+    ans = [float(probs[0].numpy()), float(probs[1].numpy())]
+    return ans
