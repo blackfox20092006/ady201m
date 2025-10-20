@@ -71,14 +71,14 @@ def process_video(video_data):
             get_max_feature(features.get("contrast")),
             get_max_feature(features.get("optical_flow")),
             video_id,
-            get_vio_prob(file_path)
+            get_vio_prob(file_path)[0]
         )
 
         cur.execute("SELECT COUNT(*) FROM Analysis_result WHERE video_id = ?", (video_id,))
         if cur.fetchone()[0] > 0:
             update_query = """
                 UPDATE Analysis_result
-                SET frame_diff_mean = ?, frame_diff_var = ?, blur = ?, brightness = ?, contrast = ?, optical_flow = ?
+                SET frame_diff_mean = ?, frame_diff_var = ?, blur = ?, brightness = ?, contrast = ?, optical_flow = ?, violence_probability=?
                 WHERE video_id = ?;
             """
             cur.execute(update_query, update_data)
