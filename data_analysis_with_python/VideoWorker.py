@@ -5,7 +5,7 @@ import tensorflow as tf
 from dotenv import find_dotenv, load_dotenv
 load_dotenv(find_dotenv())
 root = os.getenv('ROOT')
-model_path = os.path.join(root, model, "model.tflite")
+model_path = os.path.join(root, 'model', "model.tflite")
 
 def load_video(video_input):
     if isinstance(video_input, str):
