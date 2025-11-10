@@ -27,6 +27,15 @@ class Pandas_analyzer:
     def get_earliest_and_latest_pulish(self):
         print(int(self.pd_cursor['Year'].max()))
         print(int(self.pd_cursor['Year'].min()))
-    def 
+    def get_game_after_2010(self):
+        print(self.pd_cursor[self.pd_cursor['Year']>2010])
+    def get_top10_game_at_NASales(self):
+        print(self.pd_cursor.sort_values(by=['NA_Sales']).tail(10))
+    def get_action_game_more_10m(self):
+        print(self.pd_cursor[(self.pd_cursor['Global_Sales']>10) & (self.pd_cursor['Genre']=='Action')])
+    def get_game_jp_bigger_than_eu(self):
+        print(self.pd_cursor[(self.pd_cursor['JP_Sales']) > (self.pd_cursor['EU_Sales'])])
+    def sort_global_sales_descending(self):
+        print(self.pd_cursor.sort_values(by=['Global_Sales']))
 a = Pandas_analyzer()
-a.get_earliest_and_latest_pulish()
+a.sort_global_sales_descending()
