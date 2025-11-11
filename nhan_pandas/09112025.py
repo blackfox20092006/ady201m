@@ -103,7 +103,7 @@ class Pandas_analyzer:
         print(self.pd_cursor.sort_values(by=['Global_Sales'], ascending=False))
     def get_Nintendo_pulisher(self):
         print(self.pd_cursor[self.pd_cursor['Publisher']=='Nintendo'])
-    def get_sum_by_platform(self):
+    def get_sum_by_platform(self): #q24
         print(self.pd_cursor.groupby('Platform')['Global_Sales'].max())
     def get_avg_per_platform_in_NA_Sales(self):
         print(self.pd_cursor.groupby('Platform')['NA_Sales'].mean())
@@ -118,5 +118,14 @@ class Pandas_analyzer:
     def q22(self):
         print(self.pd_cursor.groupby('Publisher')['Global_Sales'].mean())
     def q23(self):
+        a = self.pd_cursor.groupby('Year').sum()[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']]
+        a['Total_Sales'] = a.sum(axis=1)
+        print(a)
+    def q24(self):
+        pass
+    def q25(self):
+        print(self.pd_cursor.groupby('Publisher')['Name'].count())
+    def q26(self):
+        print(self.pd_cursor.groupby(['Genre', 'Year'])[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']].mean())
 a = Pandas_analyzer()
-a.q22()
+a.q26()
