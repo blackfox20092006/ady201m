@@ -1,7 +1,4 @@
 
-
-# 
-
 # **DỰ ÁN PHÂN TÍCH, TRỰC QUAN VÀ PHÁT HIỆN BẠO LỰC TRONG VIDEO SỬ DỤNG THỊ GIÁC MÁY TÍNH VÀ HỌC SÂU**
 
 **Giáo viên hướng dẫn**: Nguyễn Hoàng Linh 
@@ -12,15 +9,6 @@
 |  | Bùi Xuân Hoan \- Thành viên \- SE204139  |
 | Lớp | AI1912\_ADY201m\_FA25  |
 
-# 
-
-# 
-
-# 
-
-# 
-
-# 
 
 # **MỤC LỤC**
 
