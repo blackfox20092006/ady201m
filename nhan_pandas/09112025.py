@@ -127,5 +127,5 @@ class Pandas_analyzer:
         print(self.pd_cursor.groupby('Publisher')['Name'].count())
     def q26(self):
         print(self.pd_cursor.groupby(['Genre', 'Year'])[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']].mean())
-a = Pandas_analyzer()
+a = Pandas_analyzer() 
 a.q26()
