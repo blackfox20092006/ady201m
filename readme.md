@@ -8,7 +8,7 @@
 |  | Lê Phan Thanh Nghi \- Thành viên \- SE203909  |
 |  | Bùi Xuân Hoan \- Thành viên \- SE204139  |
 | Lớp | AI1912\_ADY201m\_FA25  |
-
+Link PDF báo cáo: [click here](https://docs.google.com/document/d/1unzAM4F5qV1y0UpWdBj3Rz7bPOC8TwbpZF94WgIW8kM/edit?usp=sharing)
 
 # **MỤC LỤC**
 
