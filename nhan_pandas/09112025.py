@@ -133,5 +133,5 @@ class Pandas_analyzer:
         genre_year_sum = a.groupby(['Genre', 'Year'])['Total_Sales'].sum().reset_index()
         result = genre_year_sum.loc[genre_year_sum.groupby('Genre')['Total_Sales'].idxmax()]
         print(result)
-a = Pandas_analyzer() 
-a.q27()
+# a = Pandas_analyzer() 
+# a.q27()
