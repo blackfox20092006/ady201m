@@ -129,7 +129,9 @@ class Pandas_analyzer:
         print(self.pd_cursor.groupby(['Genre', 'Year'])[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']].mean())
     def q27(self):
         a = self.pd_cursor
-        a['Total_Sales'] = self.pd_cursor[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']].sum(axis=1)
-        print(a.groupby(['Genre', 'Year'])['Total_Sales'].max())
+        a['Total_Sales'] = a[['NA_Sales', 'EU_Sales', 'JP_Sales', 'Other_Sales', 'Global_Sales']].sum(axis=1)
+        genre_year_sum = a.groupby(['Genre', 'Year'])['Total_Sales'].sum().reset_index()
+        result = genre_year_sum.loc[genre_year_sum.groupby('Genre')['Total_Sales'].idxmax()]
+        print(result)
 a = Pandas_analyzer() 
 a.q27()
