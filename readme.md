@@ -3,11 +3,13 @@
 
 **Giáo viên hướng dẫn**: Nguyễn Hoàng Linh 
 
-| Thành viên nhóm  | Hoàng Quang Nhân \- Trưởng nhóm \- SE204283 |
+| Thành viên nhóm  | [Hoàng Quang Nhân](https://github.com/blackfox20092006) \- Trưởng nhóm \- SE204283 |
 | :---: | :---- |
-|  | Lê Phan Thanh Nghi \- Thành viên \- SE203909  |
-|  | Bùi Xuân Hoan \- Thành viên \- SE204139  |
+|  | [Lê Phan Thanh Nghi](https://github.com/thanh-nghi) \- Thành viên \- SE203909  |
+|  | [Bùi Xuân Hoan](https://github.com/DOMEMON) \- Thành viên \- SE204139  |
 | Lớp | AI1912\_ADY201m\_FA25  |
+
+
 Link PDF báo cáo: [click here](https://docs.google.com/document/d/1unzAM4F5qV1y0UpWdBj3Rz7bPOC8TwbpZF94WgIW8kM/edit?usp=sharing)
 
 # **MỤC LỤC**
