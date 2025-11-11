@@ -6,13 +6,8 @@ import cv2
 import tensorflow as tf
 import tensorflow_hub as hub
 from tensorflow.keras import layers, Model
-try:
-    from tqdm.keras import TqdmCallback
-except ImportError:
-    print("Error: 'tqdm' library not found. Please install it: pip install tqdm")
-    sys.exit(1)
 
-IMAGE_SIZE = 224
+IMAGE_SIZE = 256
 NUM_FRAMES = 16
 BATCH_SIZE = 8
 EPOCHS = 10
@@ -20,44 +15,34 @@ DATA_DIR = 'data'
 TFLITE_MODEL_PATH = 'model.tflite'
 
 def py_load_video(path_b):
-    try:
-        path = path_b.decode('utf-8')
-        cap = cv2.VideoCapture(path)
-        
-        if not cap.isOpened():
-            print(f"Error: Could not open video {path}", file=sys.stderr)
-            return np.zeros((NUM_FRAMES, IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.float32)
+    path = path_b.decode('utf-8')
+    cap = cv2.VideoCapture(path)
+    
+    frames = []
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, (IMAGE_SIZE, IMAGE_SIZE))
+        frames.append(frame)
+    cap.release()
 
-        frames = []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, (IMAGE_SIZE, IMAGE_SIZE))
-            frames.append(frame)
-        cap.release()
-
-        if not frames:
-            print(f"Error: No frames read from {path}", file=sys.stderr)
-            return np.zeros((NUM_FRAMES, IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.float32)
-
-        video = np.array(frames, dtype=np.float32)
-        
-        total_frames = video.shape[0]
-        if total_frames >= NUM_FRAMES:
-            indices = np.linspace(0, total_frames - 1, NUM_FRAMES, dtype=int)
-            sampled_video = video[indices, ...]
-        else:
-            padding = np.tile(video[-1:], (NUM_FRAMES - total_frames, 1, 1, 1))
-            sampled_video = np.concatenate([video, padding], axis=0)
-            
-        sampled_video = sampled_video / 255.0
-        return sampled_video.astype(np.float32)
-
-    except Exception as e:
-        print(f"Error processing video {path_b}: {e}", file=sys.stderr)
+    if not frames:
         return np.zeros((NUM_FRAMES, IMAGE_SIZE, IMAGE_SIZE, 3), dtype=np.float32)
+
+    video = np.array(frames, dtype=np.float32)
+    
+    total_frames = video.shape[0]
+    if total_frames >= NUM_FRAMES:
+        indices = np.linspace(0, total_frames - 1, NUM_FRAMES, dtype=int)
+        sampled_video = video[indices, ...]
+    else:
+        padding = np.tile(video[-1:], (NUM_FRAMES - total_frames, 1, 1, 1))
+        sampled_video = np.concatenate([video, padding], axis=0)
+        
+    sampled_video = sampled_video / 255.0
+    return sampled_video.astype(np.float32)
 
 def load_video(path, label):
     video = tf.py_function(py_load_video, [path], tf.float32)
@@ -75,7 +60,6 @@ def create_dataset(data_dir):
     labels = violence_labels + non_violence_labels
     
     if not files:
-        print(f"Error: No video files found in {data_dir}. Please check the path.", file=sys.stderr)
         sys.exit(1)
         
     ds = tf.data.Dataset.from_tensor_slices((files, labels))
@@ -139,12 +123,26 @@ def export_streaming_model(base_model):
     head_dense_1_stream.set_weights(head_dense_1.get_weights())
     head_logits_stream.set_weights(head_logits.get_weights())
 
+    # Thêm lớp Softmax
+    head_softmax_stream = layers.Softmax()
+
     class StreamingModelModule(tf.Module):
-        def __init__(self, encoder, dense1, logits):
+        def __init__(self, encoder, dense1, logits, softmax):
             super().__init__()
             self.encoder = encoder
             self.dense1 = dense1
             self.logits = logits
+            self.softmax = softmax # Thêm softmax
+
+        @tf.function
+        def __call__(self, image, states):
+            features, new_states = self.encoder(image, states=states)
+            x = self.dense1(features)
+            logits_output = self.logits(x)
+            probs_output = self.softmax(logits_output) # Áp dụng softmax
+            
+            # Đổi tên output từ 'logits' thành 'probabilities'
+            return {'probabilities': probs_output, **new_states}
 
         @tf.function
         def __call__(self, image, states):
@@ -161,7 +159,8 @@ def export_streaming_model(base_model):
     streaming_module = StreamingModelModule(
         encoder=stream_encoder_layer,
         dense1=head_dense_1_stream,
-        logits=head_logits_stream
+        logits=head_logits_stream,
+        softmax=head_softmax_stream # Truyền lớp softmax vào
     )
 
     init_states = stream_encoder_layer.init_states(batch_size=1)
@@ -194,17 +193,23 @@ def export_streaming_model(base_model):
 
     with open(TFLITE_MODEL_PATH, 'wb') as f:
         f.write(tflite_model)
+    
+def main():
+    train_ds, val_ds = create_dataset(DATA_DIR)
+    
+    base_model = build_base_model()
+    
+    base_model.fit(
+        train_ds,
+        validation_data=val_ds,
+        epochs=EPOCHS,
+        callbacks=[
+            tf.keras.callbacks.EarlyStopping(patience=3, monitor='val_accuracy', restore_best_weights=True)
+        ],
+        verbose=0
+    )
+    
+    export_streaming_model(base_model)
 
-train_ds, val_ds = create_dataset(DATA_DIR)
-base_model = build_base_model()
-base_model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=EPOCHS,
-    callbacks=[
-        tf.keras.callbacks.EarlyStopping(patience=3, monitor='val_accuracy', restore_best_weights=True),
-        TqdmCallback(verbose=2) 
-    ],
-    verbose=0
-)
-export_streaming_model(base_model)
+if __name__ == "__main__":
+    main()
