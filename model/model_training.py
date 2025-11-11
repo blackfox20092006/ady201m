@@ -144,13 +144,7 @@ def export_streaming_model(base_model):
             # Đổi tên output từ 'logits' thành 'probabilities'
             return {'probabilities': probs_output, **new_states}
 
-        @tf.function
-        def __call__(self, image, states):
-            features, new_states = self.encoder(image, states=states)
-            x = self.dense1(features)
-            logits_output = self.logits(x)
-            
-            return {'logits': logits_output, **new_states}
+        # ĐÃ XÓA HÀM __call__ BỊ TRÙNG LẶP GÂY LỖI Ở ĐÂY
 
         @tf.function
         def init_states(self, batch_size):
