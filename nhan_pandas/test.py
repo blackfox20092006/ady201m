@@ -1,7 +1,4 @@
 import pandas as pd
-pd.options.display.max_rows = 9999      
-pd.options.display.max_columns = None  
-pd.options.display.width = 0           
-pd.options.display.max_colwidth = None
-df = pd.read_csv('vgsales.csv')
-print(df.head())
+df = pd.read_excel('doanh_thu_cong_ty.xlsx')
+df['Lợi nhuận'] = df['Doanh thu (VNĐ)'] - df['Chi phí (VNĐ)']
+print(df.groupby('Mã công ty')['Lợi nhuận'].sum().head(6))
